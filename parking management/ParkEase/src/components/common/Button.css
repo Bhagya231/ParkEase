@@ -1,0 +1,108 @@
+
+.app-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.app-button:focus-visible {
+  outline: 3px solid var(--primary-light);
+  outline-offset: 3px;
+}
+
+.app-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Primary */
+.app-button-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.app-button-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+/* Secondary */
+.app-button-secondary {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.app-button-secondary:hover:not(:disabled) {
+  background: #cbd5e1;
+}
+
+/* Outline */
+.app-button-outline {
+  background: transparent;
+  color: var(--primary);
+  border-color: var(--border);
+}
+
+.app-button-outline:hover:not(:disabled) {
+  background: var(--primary-light);
+  border-color: var(--primary);
+}
+
+/* Danger */
+.app-button-danger {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.app-button-danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+/* Sizes */
+.app-button-small {
+  padding: 8px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
+.app-button-medium {
+  padding: 12px 20px;
+}
+
+.app-button-large {
+  padding: 14px 24px;
+  font-size: 16px;
+}
+
+/* Full width */
+.app-button-full-width {
+  width: 100%;
+}
+
+/* Loading indicator */
+.button-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: button-spin 0.7s linear infinite;
+}
+
+@keyframes button-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

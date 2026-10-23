@@ -1,0 +1,27 @@
+
+.dashboard-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.dashboard-content {
+  margin-left: 250px;
+  min-height: 100vh;
+  width: calc(100% - 250px);
+}
+
+@media (max-width: 768px) {
+  .dashboard-sidebar {
+    width: 210px;
+  }
+
+  .dashboard-content {
+    margin-left: 210px;
+    width: calc(100% - 210px);
+  }
+}

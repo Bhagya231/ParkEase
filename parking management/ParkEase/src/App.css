@@ -1,0 +1,60 @@
+
+
+.auth-image-overlay {
+  min-height: 100vh;
+}
+
+.auth-form-panel {
+  min-height: 100vh;
+  background: #ffffff;
+}
+
+.auth-form-container {
+  max-width: 420px;
+}
+
+.auth-form-container h2 {
+  color: #172b25;
+  font-size: 2rem;
+}
+
+.auth-form-container .form-control {
+  min-height: 48px;
+  border-radius: 8px;
+  border-color: #dce5e0;
+}
+
+.auth-form-container .form-control:focus {
+  border-color: #047857;
+  box-shadow: 0 0 0 0.2rem rgba(4, 120, 87, 0.14);
+}
+
+.auth-form-container .btn-primary {
+  background-color: #047857;
+  border-color: #047857;
+  min-height: 48px;
+  border-radius: 8px;
+}
+
+.auth-form-container .btn-primary:hover {
+  background-color: #065f46;
+  border-color: #065f46;
+}
+
+@media (max-width: 991.98px) {
+  .auth-form-panel {
+    min-height: 100vh;
+  }
+}
+
+
+.auth-form-container .card {
+  width: 100%;
+  background-color: #ffffff;
+  border-radius: 16px;
+  overflow: visible;
+}
+
+.auth-form-container .card-body {
+  padding: 24px;
+}

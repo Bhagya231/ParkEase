@@ -1,0 +1,65 @@
+
+/* Shared login and registration background */
+.auth-page {
+    background:
+        linear-gradient(
+            rgba(9, 35, 28, 0.50),
+            rgba(9, 35, 28, 0.60)
+        ),
+        url("../../assets/login-bg.png");
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    padding: 24px;
+}
+
+/* Shared card container */
+.auth-form-container {
+    width: 100%;
+    max-width: 950px;
+    min-width: 0;
+}
+
+/* Login card stays narrower than registration */
+.login-form-container {
+    max-width: 500px;
+}
+
+/* Shared card styling */
+.auth-form-container .card {
+    width: 100%;
+    border: none;
+    border-radius: 20px;
+    box-shadow: 0 15px 45px rgba(0, 0, 0, 0.18);
+    background-color: #fff;
+}
+
+.auth-form-container .card-body {
+    padding: 36px;
+}
+
+.auth-form-container h2 {
+    color: #123b30;
+    font-size: 28px;
+}
+
+.auth-form-container .form-control {
+    min-height: 46px;
+    border-radius: 8px;
+}
+
+.auth-form-container .form-control:focus {
+    border-color: #198754;
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15);
+}
+
+@media (max-width: 575.98px) {
+    .auth-page {
+        padding: 12px;
+    }
+
+    .auth-form-container .card-body {
+        padding: 24px 20px;
+    }
+}
