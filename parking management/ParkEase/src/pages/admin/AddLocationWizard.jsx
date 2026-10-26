@@ -1,244 +1,367 @@
-
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useParams,useSearchParams  } from "react-router-dom";
 
 import Card from "../../components/common/Card";
-import FormInput from "../../components/common/FormInput";
+
 import Button from "../../components/common/Button";
-import  { validateLocationForm }  from "../../util/ValidateLocationForm";
 
-const steps = [
-  "Location Details",
-  "Pricing",
-  "Floors",
-  "Slots",
-  "Review",
-];
 
-const initialLocation = {
-  locationName: "",
-  area: "",
-  address: "",
-  openTime: "",
-  closeTime: "",
-};
+import LocationDetailsStep from "./locationWizard/LocationDetailsStep";
+import PricingStep from "./locationWizard/PricingStep";
+import FloorsStep from "./locationWizard/FloorStep";
+import SlotsStep from "./locationWizard/SlotStep";
+import ReviewStep from "./locationWizard/ReviewStep";
 
-function AddLocationWizard() {
-  const navigate = useNavigate();
 
-  const [currentStep, setCurrentStep] = useState(0);
-  const [location, setLocation] = useState(initialLocation);
-  const [errors, setErrors] = useState({});
+import { loadLocationWizard } from "../../util/locationWizardLoader";
 
-  function handleChange(event) {
-    const { name, value } = event.target;
+import { SaveLocation, saveLocationPricing,saveLocationFloor,generateParkingSlots } from "../../util/LocationWizardActions";
 
-    setLocation((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+const steps = ["Location Details","Pricing","Floors","Slots","Review",];
 
-    setErrors((previous) => ({
-      ...previous,
-      [name]: "",
-    }));
-  }
+const initialData = {location: null,prices: [], floors:[],slots: [],allSlots:[]};
 
-  function validateLocation() {
-    const validationErrors = validateLocationForm(location);
 
-    setErrors(validationErrors);
 
-    return Object.keys(validationErrors).length === 0;
-  }
+// Determine the first incomplete step
+function getStartingStep(data) 
+{
+    const {location,prices = [],floors = [],floor,slots = [], allSlots = []} = data;
 
-  function handleNext() {
-    if (currentStep === 0 && !validateLocation()) {
-      return;
+    // New location
+    if (!location) {
+        return 0;
     }
 
-    setCurrentStep((previous) =>
-      Math.min(previous + 1, steps.length - 1)
-    );
+    // Pricing has not been configured
+    if (prices.length === 0) {
+        return 1;
+    }
+
+    // Check whether every existing slot has matching pricing
+    const hasMissingPricing = allSlots.some(slot =>!prices.some(price => price.vehicleType === slot.vehicleType));
+
+    if (hasMissingPricing) {
+        return 1;
+    }
+
+    // No floor has been created
+    if (floors.length === 0) {
+        return 2;
+    }
+
+    // An existing floor has no slots yet
+    if (!floor || slots.length === 0) {
+        return 3;
+    }
+
+    // Setup appears complete
+    return 4;
+}
+
+function AddLocationWizard() 
+{
+    const navigate = useNavigate();
+    const { locationId } = useParams();
+
+    
+
+    const [wizardData, setWizardData] = useState(initialData);
+
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState("");
+
+    const [searchParams] = useSearchParams();
+
+    const requestedStep = searchParams.get("step");
+    const mode = searchParams.get("mode");
+
+    const initialStep = Number(searchParams.get("step")) || 0;
+
+    const [currentStep, setCurrentStep] = useState(initialStep);
+
+    
+
+    const { location,prices,floors, slots} = wizardData;
+
+    // Load existing setup when continuing an inactive location
+    useEffect(() => {
+        let isMounted = true;
+
+        async function loadData() 
+        {
+            setLoading(true);
+            setError("");
+
+            try {
+                const data = await loadLocationWizard(locationId || null);
+
+                console.log("Wizard location ID:", locationId);
+                console.log("Wizard loaded location:", data.location);
+
+                if (!isMounted) 
+                {
+                    return;
+                }
+
+                setWizardData(data);
+
+                if (mode === "edit" && requestedStep !== null) {
+                    const stepNumber = Number(requestedStep);
+
+                    if (stepNumber >= 1 && stepNumber <= steps.length) {
+                        // URL uses 1-based step numbers; React state uses 0-based indexes.
+                        setCurrentStep(stepNumber - 1);
+                    } else {
+                        setCurrentStep(getStartingStep(data));
+                    }
+                } else {
+                    setCurrentStep(getStartingStep(data));
+                }
+
+            } catch (err) {
+                if (isMounted) {
+                    setError(err.message || "Failed to load setup data.");
+                   
+                }
+            } finally {
+                if (isMounted) {
+                    setLoading(false);
+                }
+            }
+        }
+
+        loadData();
+
+        return () => 
+        {
+            isMounted = false;
+        };
+    }, [locationId, requestedStep, mode]);
+
+
+ async function refreshWizard() {
+        if (!location?.id)
+         {
+            return;
+        }
+
+        const data = await loadLocationWizard(location.id);
+
+        setWizardData(data);
+        setCurrentStep(getStartingStep(data));
   }
 
-  function handleBack() {
-    setCurrentStep((previous) =>
-      Math.max(previous - 1, 0)
-    );
-  }
 
-  function handleCancel() {
-    navigate("/admin/locations");
-  }
 
-  function handleFinish() {
-    // Backend save and activation will be added
-    // after the API integration is implemented.
-    navigate("/admin/locations");
-  }
 
-  function renderLocationDetails() {
-    return (
-      <>
-        <div className="mb-4">
-          <h5 className="fw-semibold">Basic Information</h5>
-          <p className="text-muted mb-0">
-            Enter the parking location details.
-          </p>
-        </div>
+  async function handleSaveLocation(locationData) 
+  {
+    setSaving(true); 
+    setError("");
 
-        <div className="row">
-          <div className="col-md-6">
-            <FormInput
-              label="Location Name"
-              name="locationName"
-              value={location.locationName}
-              onChange={handleChange}
-              placeholder="e.g. City Center Parking"
-              error={errors.locationName}
-              required
-            />
-          </div>
+        try {
+            const savedLocation = await SaveLocation(location?.id || null,locationData);
 
-          <div className="col-md-6">
-            <FormInput
-              label="Area"
-              name="area"
-              value={location.area}
-              onChange={handleChange}
-              placeholder="e.g. Madhapur"
-              error={errors.area}
-              required
-            />
-          </div>
+            setWizardData(previous => ({ ...previous, location: savedLocation}));
 
-          <div className="col-12">
-            <FormInput
-              label="Full Address"
-              name="address"
-              inputType="textarea"
-              value={location.address}
-              onChange={handleChange}
-              placeholder="Enter the complete parking address"
-              error={errors.address}
-              rows={3}
-              required
-            />
-          </div>
+            return savedLocation;
 
-          <div className="col-md-6">
-            <FormInput
-              label="Opening Time"
-              name="openTime"
-              type="time"
-              value={location.openTime}
-              onChange={handleChange}
-              error={errors.openTime}
-              required
-            />
-          </div>
+        } catch (err) {
+            setError(err.message || "Failed to save location.");
+            throw err;
 
-          <div className="col-md-6">
-            <FormInput
-              label="Closing Time"
-              name="closeTime"
-              type="time"
-              value={location.closeTime}
-              onChange={handleChange}
-              error={errors.closeTime}
-              required
-            />
-          </div>
-        </div>
-      </>
-    );
-  }
+        } finally {
+            setSaving(false);
+        }
+    }
+
+
+     function handleLocationNext(savedLocation) {
+        setWizardData(previous => ({ ...previous, location: savedLocation }));
+
+        setCurrentStep(1);
+    }
+
+
+    async function handleSavePricing(pricingData)
+     {
+        if (!location?.id) {
+            throw new Error("Please save the location first.");
+        }
+
+        setSaving(true);
+        setError("");
+
+        try {
+            const savedPrices = await saveLocationPricing(location.id,pricingData,prices);
+   
+
+            return savedPrices;
+
+        } catch (err) {
+            setError(err.message || "Failed to save pricing.");
+            throw err;
+
+        } finally {
+            setSaving(false);
+        }
+    }
+
+
+    function handlePricingNext(savedPrices) {
+        const updatedData = {...wizardData,prices: savedPrices};
+
+        setWizardData(updatedData);
+        setCurrentStep(getStartingStep(updatedData));
+    }
+
+
+    async function handleSaveFloor(floorData) 
+    {
+        if (!location?.id) {
+            throw new Error("Please save the location first.");
+        }
+
+        setSaving(true);
+        setError("");
+
+        try {
+            return await saveLocationFloor(location.id,floorData);
+
+        } catch (err) {
+            setError(err.message || "Failed to create floor.");
+            throw err;
+
+        } finally {
+            setSaving(false);
+        }
+    }
+
+
+    function handleFloorNext(savedFloor) {
+        setWizardData(previous => ({ ...previous, floor: savedFloor,
+            floors: [ ...previous.floors, savedFloor],slots: [] }));
+
+        setCurrentStep(3);
+    }
+
+
+
+    async function handleSaveSlots(slotData) {
+        setSaving(true);
+        setError("");
+
+        try {
+            return await generateParkingSlots( slotData.floorId, slotData.request);
+
+        } catch (err) {
+            setError(err.message || "Failed to generate slots.");
+            throw err;
+
+        } finally {
+            setSaving(false);
+        }
+    }
+
+
+     async function handleSlotsNext() {
+        setLoading(true);
+        setError("");
+
+        try {
+            // Reload everything so we can find any remaining
+            // floors without slots or missing pricing.
+            await refreshWizard();
+
+        } catch (err) {
+            setError(err.message || "Failed to refresh setup data.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function handleBack() {
+        setError("");
+
+        setCurrentStep(previous =>Math.max(previous - 1, 0));
+    }
+
+     function handleCancel() {
+        navigate("/admin/locations");
+    }
+   
+
+    function handleFinish() {
+    
+        navigate("/admin/locations");
+    }
+
+ 
+
+      
 
   function renderStepContent() {
     switch (currentStep) {
       case 0:
-        return renderLocationDetails();
+        return (
+          <LocationDetailsStep
+              savedLocation={location}
+              onSave={handleSaveLocation}
+              onNext={handleLocationNext}
+              saving={saving}
+          />
+
+        )
 
       case 1:
         return (
-          <div>
-            <h5 className="fw-semibold">Configure Pricing</h5>
-            <p className="text-muted">
-              Next, configure hourly and overstay prices for
-              each vehicle type.
-            </p>
-            <p className="small text-secondary">
-              Pricing form and API integration are pending.
-            </p>
-          </div>
+           <PricingStep
+              savedPrices={prices}
+              onSave={handleSavePricing}
+              onBack={handleBack}
+              onNext={handlePricingNext}
+              saving={saving}
+            />
         );
 
       case 2:
         return (
-          <div>
-            <h5 className="fw-semibold">Add Parking Floors</h5>
-            <p className="text-muted">
-              Add the floors available at this location.
-            </p>
-            <p className="small text-secondary">
-              Floor form and API integration are pending.
-            </p>
-          </div>
+          <FloorsStep
+            savedFloor={floors}
+            onSave={handleSaveFloor}
+            onBack={handleBack}
+            onNext={handleFloorNext}
+            saving={saving}
+          />
+
         );
 
       case 3:
         return (
-          <div>
-            <h5 className="fw-semibold">Configure Parking Slots</h5>
-            <p className="text-muted">
-              Add parking slots to the floors you configure.
-            </p>
-            <p className="small text-secondary">
-              Slot form and API integration are pending.
-            </p>
-          </div>
+          <SlotsStep
+            savedFloor={floors}
+            savedSlots={slots}
+            onSave={handleSaveSlots}
+            onBack={handleBack}
+            onNext={handleSlotsNext}
+            saving={saving}
+          />
+
         );
 
       case 4:
         return (
-          <div>
-            <h5 className="fw-semibold mb-3">
-              Review Location Details
-            </h5>
+          <ReviewStep
+            location={location}
+            prices={prices}
+            floor={floors}
+            slots={slots}
+            onBack={handleBack}
+            onFinish={handleFinish}
+        />
 
-            <div className="table-responsive">
-              <table className="table table-bordered align-middle">
-                <tbody>
-                  <tr>
-                    <th scope="row">Location Name</th>
-                    <td>{location.locationName}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Area</th>
-                    <td>{location.area}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Address</th>
-                    <td>{location.address}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Opening Time</th>
-                    <td>{location.openTime}</td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Closing Time</th>
-                    <td>{location.closeTime}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <p className="text-muted small">
-              This is a preview only. The location has not
-              been saved to the backend.
-            </p>
-          </div>
         );
 
       default:
@@ -246,13 +369,31 @@ function AddLocationWizard() {
     }
   }
 
+   if (loading) {
+        return (
+            <div className="container-fluid py-5 text-center">
+                <div  className="spinner-border text-primary" role="status">
+    
+                    <span className="visually-hidden">
+                        Loading...
+                    </span>
+                </div>
+
+                <p className="text-muted mt-3">
+                    Loading location setup...
+                </p>
+            </div>
+        );
+    }
+
+
   return (
     <div className="container-fluid py-4">
       <div className="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div>
-          <h3 className="fw-bold mb-1">Add Parking Location</h3>
+          <h3 className="fw-bold mb-1">{locationId ? "Continue location Setup" : "Add Parking Location"}</h3>
           <p className="text-muted mb-0">
-            Configure a location and its parking facilities.
+            Configure the location, pricing, floors and parking slots.
           </p>
         </div>
 
@@ -261,6 +402,15 @@ function AddLocationWizard() {
         </Button>
       </div>
 
+
+      {error && (
+                <div  className="alert alert-danger"  role="alert">
+                  {error}
+                </div>
+                
+            )}
+
+
       <Card className="mb-4">
         <div className="row g-3">
           {steps.map((step, index) => (
@@ -268,28 +418,14 @@ function AddLocationWizard() {
               <div className="d-flex flex-column align-items-center text-center">
                 <div
                   className={`rounded-circle d-flex align-items-center justify-content-center mb-2 ${
-                    index === currentStep
-                      ? "bg-primary text-white"
-                      : index < currentStep
-                        ? "bg-success text-white"
-                        : "bg-light text-secondary border"
+                    index === currentStep ? "bg-primary text-white" : index < currentStep ? "bg-success text-white" : "bg-light text-secondary border"
                   }`}
-                  style={{
-                    width: "38px",
-                    height: "38px",
-                    fontWeight: 600,
-                  }}
-                >
+                  style={{ width: "38px",height: "38px", fontWeight: 600,}}>
                   {index + 1}
                 </div>
 
                 <span
-                  className={`small ${
-                    index === currentStep
-                      ? "fw-bold text-primary"
-                      : "text-muted"
-                  }`}
-                >
+                  className={`small ${index === currentStep ? "fw-bold text-primary" : "text-muted"}`}>
                   {step}
                 </span>
               </div>
@@ -298,14 +434,8 @@ function AddLocationWizard() {
         </div>
 
         <div className="progress mt-4" style={{ height: "5px" }}>
-          <div
-            className="progress-bar"
-            role="progressbar"
-            style={{
-              width: `${
-                (currentStep / (steps.length - 1)) * 100
-              }%`,
-            }}
+          <div className="progress-bar" role="progressbar" style={{width: `${(currentStep / (steps.length - 1)) * 100}%`}}
+            
             aria-valuenow={currentStep}
             aria-valuemin={0}
             aria-valuemax={steps.length - 1}
@@ -316,25 +446,7 @@ function AddLocationWizard() {
       <Card>
         {renderStepContent()}
 
-        <div className="d-flex justify-content-between flex-wrap gap-2 mt-4 pt-3 border-top">
-          <Button
-            variant="secondary"
-            onClick={handleBack}
-            disabled={currentStep === 0}
-          >
-            Back
-          </Button>
-
-          {currentStep < steps.length - 1 ? (
-            <Button onClick={handleNext}>
-              Next
-            </Button>
-          ) : (
-            <Button onClick={handleFinish}>
-              Finish
-            </Button>
-          )}
-        </div>
+        
       </Card>
     </div>
   );

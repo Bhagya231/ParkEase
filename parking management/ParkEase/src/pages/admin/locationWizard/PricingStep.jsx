@@ -1,8 +1,8 @@
 
 import { useEffect, useState } from "react";
-import Card from "../../common/Card";
-import FormInput from "../../common/FormInput";
-import Button from "../../common/Button";
+import Card from "../../../components/common/Card";
+import FormInput from "../../../components/common/FormInput";
+import Button from "../../../components/common/Button";
 
 const vehicleTypes = ["CAR", "BIKE", "EV"];
 
@@ -12,17 +12,17 @@ const initialPrices = vehicleTypes.map(vehicleType => ({
     overstayPrice: ""
 }));
 
-function PricingStep({savedPrices = [],onSave,onBack,saving = false}) 
+function PricingStep({savedPrices = [],onSave,onBack,saving = false,onNext}) 
 {
     const [prices, setPrices] = useState(initialPrices);
     const [errors, setErrors] = useState({});
+    const [formError, setFormError] = useState("");
 
     useEffect(() => {
         setPrices(
             vehicleTypes.map(vehicleType => {
                 const existing = savedPrices.find(
-                    price => price.vehicleType === vehicleType
-                );
+                    price => price.vehicleType === vehicleType);
 
                 return {
                     vehicleType,
@@ -37,17 +37,13 @@ function PricingStep({savedPrices = [],onSave,onBack,saving = false})
         const { name, value } = event.target;
 
         setPrices(previous =>
-            previous.map((price, currentIndex) =>
-                currentIndex === index
-                    ? { ...price, [name]: value }
-                    : price
-            )
-        );
+            previous.map((price, currentIndex) => currentIndex === index  ? { ...price, [name]: value } : price));
 
         setErrors(previous => ({
             ...previous,
             [`${index}-${name}`]: ""
         }));
+        setFormError("");
     }
 
     function validate() {
@@ -58,12 +54,11 @@ function PricingStep({savedPrices = [],onSave,onBack,saving = false})
                 const value = price[field];
                 const number = Number(value);
 
-                if (value === "" || !Number.isFinite(number) || number < 1) {
-                    nextErrors[`${index}-${field}`] =
-                        "Enter a price of at least 1.";
-                } else if (!/^\d{1,8}(\.\d{1,2})?$/.test(value)) {
-                    nextErrors[`${index}-${field}`] =
-                        "Use up to 8 integer digits and 2 decimal places.";
+                if (value.trim() === "" || !Number.isFinite(number) || number < 1) {
+                    nextErrors[`${index}-${field}`] = "Enter a price of at least 1.";
+                } else if (!/^\d{1,8}(\.\d{1,2})?$/.test(value))
+                    {
+                        nextErrors[`${index}-${field}`] = "Use up to 8 integer digits and 2 decimal places.";
                 }
             });
         });
@@ -77,17 +72,29 @@ function PricingStep({savedPrices = [],onSave,onBack,saving = false})
 
         if (!validate()) return;
 
-        const result = await onSave(
-            prices.map(price => ({
-                ...price,
-                hourPrice: Number(price.hourPrice),
-                overstayPrice: Number(price.overstayPrice)
-            }))
-        );
+        setFormError("");
 
-        if (result) {
-            // The wizard can move forward after confirmed saving.
+        const pricingData = prices.map(price => ({
+            vehicleType: price.vehicleType,
+            hourPrice: Number(price.hourPrice),
+            overstayPrice: Number(price.overstayPrice)
+        }));
+
+         try {
+            const result = await onSave(pricingData);
+
+            if (result) {
+                onNext(result);
+            } else {
+                setFormError("Pricing could not be saved. Please try again.");
+            }
+        } catch (error) {
+            setFormError(
+                error.message || "Failed to save pricing. Please try again.");
         }
+
+
+    
     }
 
     return (
@@ -121,6 +128,8 @@ function PricingStep({savedPrices = [],onSave,onBack,saving = false})
                                             label="Overstay Price (₹)"
                                             name="overstayPrice"
                                             type="number"
+                                            min="1"
+                                            step="0.01"
                                             value={price.overstayPrice}
                                             onChange={event =>
                                                 handleChange(index, event)
@@ -135,12 +144,19 @@ function PricingStep({savedPrices = [],onSave,onBack,saving = false})
                     ))}
                 </div>
 
+                 {formError && (
+                    <div className="alert alert-danger mt-3">
+                        {formError}
+                    </div>
+                )}
+
+
                 <div className="d-flex justify-content-between mt-4">
-                    <Button variant="secondary" onClick={onBack}>
+                    <Button  type="button" variant="secondary"  onClick={onBack}>
                         Back
                     </Button>
-                    <Button type="submit" loading={saving}>
-                        Save Pricing
+                    <Button type="submit" loading={saving} >
+                         Save Pricing & Continue
                     </Button>
                 </div>
             </form>

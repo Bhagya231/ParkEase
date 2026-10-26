@@ -4,6 +4,7 @@ import { useLoaderData, useNavigate } from "react-router-dom";
 import api from "../../util/api";
 import Card from "../common/Card";
 import img from "../../assets/airport.jpg"
+import noLocationsImage from "/NoLocationParking.png"
 
 function FindParking() 
 {
@@ -13,10 +14,14 @@ function FindParking()
     const [searchInput, setSearchInput] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
+    const [search, setSearch] = useState("");
 
     const navigate = useNavigate();
 
-    async function fetchLocations(search = "") 
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+
+    async function fetchLocations(search = "",pageNumber = 0) 
     {
         setLoading(true);
         setError("");
@@ -25,8 +30,8 @@ function FindParking()
         try {
             const response = await api.get("/user/locations", {
                 params: {
-                    page,
-                    size,
+                    page:pageNumber,
+                    size:10,
                     search: search.trim() || undefined,
                     filter: "ACTIVE"
                 }
@@ -35,25 +40,25 @@ function FindParking()
             
             const result = response.data;
 
-          
+          if(result && Array.isArray(result.content))
+          {
+                setLocations(result.content);
+                setPage(result.number ?? pageNumber);
+                setTotalPages(result.totalPages ?? 0);
+          } else {
+                const locationList = Array.isArray(result) ? result : Array.isArray(result.data) ? result.data : [] ;
 
-            const locationList = Array.isArray(result)
-                ? result
-                : Array.isArray(result.content)
-                    ? result.content
-                    : Array.isArray(result.data)
-                        ? result.data
-                        : [];
+                setLocations(locationList);
+                setPage(pageNumber);
+                setTotalPages(totalPages);
+          }
 
-            setLocations(locationList);
+            
 
 
            
         } catch (err) {
-            setError(
-                err.response?.data?.message ||
-                "Failed to fetch parking locations."
-            );
+            setError(err.response?.data?.message || "Failed to fetch parking locations.");
         } finally {
             setLoading(false);
         }
@@ -62,12 +67,25 @@ function FindParking()
     async function handleSearch(event)
      {
         event.preventDefault();
-        await fetchLocations(searchInput);
+        const searchValue = searchInput.trim();
+        setSearch(searchValue);
+        await fetchLocations(searchInput, 0);
     }
 
     async function handleClear() {
         setSearchInput("");
-        await fetchLocations("");
+        setSearch("");
+        await fetchLocations("",0);
+        
+    }
+
+    async function handlePageChange(pageNumber)
+    {
+        if(pageNumber < 0 || pageNumber >= totalPages || loading)
+        {
+            return;
+        }
+        await fetchLocations(search,pageNumber);
     }
 
     return (
@@ -80,7 +98,7 @@ function FindParking()
             </div>
 
             <form onSubmit={handleSearch} className="mb-4">
-                <div className="d-flex gap-2 align-items-center">
+                <div className="d-flex flex-column flex-sm-row gap-2">
                     <input
                         type="text"
                         className="form-control"
@@ -115,10 +133,21 @@ function FindParking()
             {loading ? (
                 <p className="text-muted">Loading locations...</p>
             ) : locations.length === 0 ? (
-                <div className="alert alert-info">
-                    No active parking locations found.
-                </div>
+                
+                <div className=" text-center">
+                          <img
+                          src={noLocationsImage}
+                          alt="No parking locations available"
+                          className="img-fluid mb-3"
+                          style={{
+                            maxWidth: "440px",
+                            maxHeight: "420px",
+                            objectFit: "contain",
+                          }}
+                        />
+                      </div>
             ) : (
+                <>
                 <div className="row g-4">
                     {locations.map((location) => (
                         <div className="col-12 col-md-6 col-xl-4"
@@ -139,6 +168,38 @@ function FindParking()
                         </div>
                     ))}
                 </div>
+
+
+                    {totalPages >= 0 && (
+                       
+                        <div className="d-flex flex-wrap justify-content-center align-items-center gap-2 gap-sm-3 mt-4">
+                            <button
+                                className="btn btn-outline-success"
+                                disabled={page === 0 || loading}
+                                onClick={() => handlePageChange(page - 1)}
+                            >
+                                Previous
+                            </button>
+
+                            <span>
+                                Page {page + 1} of {totalPages + 1 }
+                            </span>
+
+                            <button className="btn btn-outline-success" disabled={page >= totalPages -1 || loading}
+                                        onClick={() => handlePageChange(page + 1)}>
+                                
+                                    Next
+                            
+                            </button>
+
+                        </div>
+                        
+                    )}
+
+                    </>
+                   
+
+
             )}
         </div>
     );

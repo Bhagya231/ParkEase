@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+import "./FloorsSlots.css";
 import api from "../../util/api";
 
 import LocationHeader from "./LocationHeader";
@@ -380,7 +381,7 @@ function FloorsSlotsPage()
   return (
     <div className="container-fluid px-3 px-lg-4 py-4">
 
-      {/* 1. Location name, area and address */}
+      {/*  Location name, area and address */}
       <LocationHeader location={location} />
 
       {error && (
@@ -396,11 +397,11 @@ function FloorsSlotsPage()
         </div>
       )}
 
-      {/* 2. Reservation form, floor, slots and summary */}
-      <div className="row g-4 align-items-start">
+      {/*  Reservation form, floor, slots and summary */}
+      <div className="row g-4 align-items-start ">
 
-        {/* Main content */}
-        <div className="col-12 col-xl-8">
+        
+        <div className="col-12 col-xl-8 ">
 
           {/* Vehicle, date and timings */}
           <ReservationDetails
@@ -433,8 +434,8 @@ function FloorsSlotsPage()
         </div>
 
         {/* Booking summary */}
-        <div className="col-12 col-xl-4">
-          <div className="position-sticky" style={{ top: "1rem" }}>
+        <div className="col-12 col-xl-4 parking-booking-sidebar ">
+          <div className="parking-booking-sticky" >
             <BookingSummary
               locationName={location.locationName}
               vehicle={selectedVehicle}

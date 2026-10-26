@@ -1,6 +1,8 @@
 import { NavLink, useNavigate } from "react-router-dom";
 import api from "../../util/api";
-import { icons } from "lucide-react";
+import { useState } from "react";
+
+import LogoutModal from "../common/LogoutModal";
 
 
 
@@ -8,6 +10,12 @@ import { icons } from "lucide-react";
 function Sidebar()
 {
     const navigate = useNavigate();
+
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
+    const [logoutError, setLogoutError] = useState("");
+
+
     const role = localStorage.getItem("role");
     const name = localStorage.getItem("name");
 
@@ -18,7 +26,7 @@ function Sidebar()
         {label: "Locations", path:"/admin/locations", icon:"bi-geo-alt"},
         // {label:"Floor Management", path: "/admin/floors", icon: "bi-building"},
         // {label: "Slot Management", path: "/admin/slots", icon: "bi-grid-3x3-gap"},
-        {label: "Users", path: "/admin/users", icon: "bi-people"},
+        // {label: "Users", path: "/admin/users", icon: "bi-people"},
         {label: "Reservations",path: "/admin/reservations",icon: "bi-calendar-check"},
         // {label: "Pricing", path: "/admin/pricing", icon: "bi-currency-rupee"},
         {label: "Sessions", path: "/admin/sessions", icon: "bi-clock-history"},
@@ -40,20 +48,28 @@ function Sidebar()
     const links = isAdmin ? adminLinks : customerLinks;
 
 
-    async function handleLogout() {
+    async function handleLogout() 
+    {
+        setLoggingOut(true);
+        setLogoutError(""); 
     try {
         const response = await api.post("/auth/logout");
+
         console.log("Logout response:", response.data);
-        localStorage.clear();
+       
 
         localStorage.removeItem("token");
         localStorage.removeItem("role");
         localStorage.removeItem("name");
 
+        setShowLogoutModal(false);
+
         navigate("/login", { replace: true });
     } catch (error) {
         console.error("Logout status:", error.response?.status);
         console.error("Logout error:", error.response?.data);
+    } finally {
+        setLoggingOut(false);
     }
     }
 
@@ -109,12 +125,30 @@ function Sidebar()
 
         <button
           className="btn btn-outline-light border-0 w-100 text-start"
-          onClick={handleLogout}
+          onClick={() => {
+            setLogoutError("");
+            setShowLogoutModal(true); 
+
+          }}
         >
           <i className="bi bi-box-arrow-right me-2"></i>
           Logout
         </button>
       </div>
+
+          
+          <LogoutModal
+            show={showLogoutModal}
+            onCancel={() => setShowLogoutModal(false)}
+            onConfirm={handleLogout}
+            loading={loggingOut}
+        />
+
+            {logoutError && (
+                <div className="alert alert-danger mt-2" role="alert">
+                    {logoutError}
+                </div>
+            )}
 
 
 
@@ -126,6 +160,8 @@ function Sidebar()
 
 
         </aside>
+
+        
     )
 
 

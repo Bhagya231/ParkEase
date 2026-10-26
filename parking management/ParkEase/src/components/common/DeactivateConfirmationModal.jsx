@@ -2,7 +2,7 @@
 import { AlertTriangle } from "lucide-react";
 import Button from "./Button";
 
-function DeactivateConfirmationModal({show, title = "Confirm Deactivation", itemName,message,onCancel,onConfirm,loading = false,})
+function DeactivateConfirmationModal({show, title = "Confirm Status Change", itemName,message,onCancel,onConfirm,loading = false,confirmText ="Confirm"})
 {
     if (!show)
     {
@@ -10,7 +10,7 @@ function DeactivateConfirmationModal({show, title = "Confirm Deactivation", item
     }
 
     return (
-        <div className="model d-block" tabIndex="-2" role="dialog"  aria-modal="true" style={{ zIndex: 9999 }}  >
+        <div className="modal d-block" tabIndex="-1" role="dialog"  aria-modal="true" style={{ zIndex: 9999, backgroundColor: "rgba(0, 0, 0, 0.5)" }}  >
             <div className="modal-dialog modal-dialog-centered">
                 <div className="modal-content border-0 shadow">
                     <div className="modal-header">
@@ -41,7 +41,7 @@ function DeactivateConfirmationModal({show, title = "Confirm Deactivation", item
 
                         <p className="text-muted mb-2">
                             {message ||
-                                "Are you sure you want to deactivate this item?"}
+                                "Are you sure you want to change this floor's status?"}
                         </p>
 
                         {itemName && (
@@ -68,7 +68,7 @@ function DeactivateConfirmationModal({show, title = "Confirm Deactivation", item
                             loading={loading}
                             disabled={loading}
                         >
-                            Confirm Deactivation
+                            {confirmText} 
                         </Button>
                     </div>
                 </div>

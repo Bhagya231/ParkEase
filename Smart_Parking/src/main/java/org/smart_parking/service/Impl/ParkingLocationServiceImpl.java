@@ -303,7 +303,7 @@ public class ParkingLocationServiceImpl implements ParkingLocationService
         }
 
         //  Check whether the location has at least one slot.
-        boolean hasSlots = floors.stream().anyMatch(floor -> parkingSlotsRepository.existsByFloorId(floor.getId().toString()));
+        boolean hasSlots = floors.stream().anyMatch(floor -> parkingSlotsRepository.existsByFloorId(floor.getId().toString()) > 0);
 
 
         if (!hasSlots)
@@ -340,7 +340,7 @@ public class ParkingLocationServiceImpl implements ParkingLocationService
         String locationId = location.getId().toString();
 
         //Count active floors at this location
-        long floorCount = parkingFloorRepository.countActiveFloorsByLocation(locationId.toString());
+        long floorCount = parkingFloorRepository.countFloorsByLocation(locationId.toString());
 
         //fetch non - deleted slots on active floors in one query
         List<ParkingSlots> slots = parkingSlotsRepository.findSlotsByActiveFloorsAtLocation(locationId);

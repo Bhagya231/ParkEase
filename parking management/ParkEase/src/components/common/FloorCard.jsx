@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MoreVertical, Pencil, Power } from "lucide-react";
 import Card from "./Card";
 
-function FloorCard({ floor, isSelected, onSelect,onEdit,onDeactivate,})
+function FloorCard({ floor, isSelected, onSelect,onDeactivate,onAddSlots})
 {
     const [showMenu, setShowMenu] = useState(false);
 
@@ -41,8 +41,7 @@ function FloorCard({ floor, isSelected, onSelect,onEdit,onDeactivate,})
                             className="btn btn-light btn-sm border-0"
                             aria-label="Floor actions"
                             aria-expanded={showMenu}
-                            onClick={() =>
-                                setShowMenu((previous) => !previous)
+                            onClick={() => setShowMenu((previous) => !previous)
                             }
                         >
                             <MoreVertical size={20} />
@@ -57,16 +56,13 @@ function FloorCard({ floor, isSelected, onSelect,onEdit,onDeactivate,})
                                     zIndex: 10,
                                 }}
                             >
-                                <button
-                                    type="button"
-                                    className="btn btn-light btn-sm w-100 text-start d-flex align-items-center gap-2 mb-1"
-                                    onClick={(event) =>
-                                        handleAction(event, onEdit)
-                                    }
-                                >
-                                    <Pencil size={16} />
-                                    Edit Floor
+
+                                 <button type="button"  className="btn btn-outline-success btn-sm w-100"
+                                    onClick={() => onAddSlots?.(floor)} >
+                                    <i className="bi bi-plus-circle me-1"></i>
+                                    Add Slots
                                 </button>
+                                
 
                                 <button
                                     type="button"
@@ -76,7 +72,7 @@ function FloorCard({ floor, isSelected, onSelect,onEdit,onDeactivate,})
                                     }
                                 >
                                     <Power size={16} />
-                                    Deactivate Floor
+                                    {floor.status === "ACTIVE" ? "Deactivate Floor" : "Activate Floor"}
                                 </button>
                             </div>
                         )}

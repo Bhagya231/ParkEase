@@ -1,81 +1,88 @@
 
 import { useEffect, useState } from "react";
-import Card from "../../common/Card";
-import FormInput from "../../common/FormInput";
-import Button from "../../common/Button";
+import Card from "../../../components/common/Card";
+import FormInput from "../../../components/common/FormInput";
+import Button from "../../../components/common/Button";
 
-function FloorsStep({
-    savedFloors = [],
-    onSave,
-    onBack,
-    saving = false
-}) {
-    const [floors, setFloors] = useState([]);
+function FloorsStep({savedFloor = [],onSave,onBack,saving = false,onNext})
+{
+    
     const [floorName, setFloorName] = useState("");
     const [floorNumber, setFloorNumber] = useState("");
     const [error, setError] = useState("");
 
     useEffect(() => {
-        setFloors(savedFloors);
-    }, [savedFloors]);
+        if(savedFloor)
+        {
+            setFloorName(savedFloor.floorName ?? "");
+            setFloorNumber(savedFloor.floorNumber !== undefined ? String(savedFloor.floorNumber) : "");
+        }
+    }, [savedFloor]);
 
-    function addFloor() {
+
+    function handleChange(event, setter)
+    {
+        setter(event.target.value);
+        setError("");
+    }
+
+
+     async function handleSubmit(event) 
+     {
+        event.preventDefault();
+
         const name = floorName.trim();
         const number = Number(floorNumber);
 
-        if (!name) {
+        if (!name) 
+        {
             setError("Floor name is required.");
             return;
         }
 
-        if (!Number.isInteger(number)) {
+        if (
+            floorNumber.trim() === "" ||
+            !Number.isInteger(number)
+        ) {
             setError("Enter a valid floor number.");
             return;
         }
 
-        if (floors.some(floor => Number(floor.floorNumber) === number)) {
-            setError("This floor number has already been added.");
-            return;
+        const floorData = 
+        {
+            floorName: name,
+            floorNumber: number
+        };
+
+        try {
+            const saved = await onSave(floorData);
+
+            if (saved) {
+                onNext(saved);
+            }
+        } catch (error) {
+            setError(error.message || "Failed to save the floor.");
+  
         }
-
-        setFloors(previous => [
-            ...previous,
-            { floorName: name, floorNumber: number }
-        ]);
-
-        setFloorName("");
-        setFloorNumber("");
-        setError("");
     }
 
-    async function handleSubmit(event) {
-        event.preventDefault();
-
-        if (floors.length === 0) {
-            setError("Add at least one floor before continuing.");
-            return;
-        }
-
-        const result = await onSave(floors);
-
-        if (!result) return;
-    }
 
     return (
         <Card
             title="Parking Floors"
-            description="Add the floors available at this location."
+            description="Add a floor for your parking location."
             className="border-0"
         >
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} noValidate>
                 <div className="row g-3 align-items-end">
                     <div className="col-md-5">
                         <FormInput
                             label="Floor Name"
                             name="floorName"
                             value={floorName}
-                            onChange={event => setFloorName(event.target.value)}
+                            onChange={(event) => handleChange(event, setFloorName)}
                             placeholder="e.g. Ground Floor"
+                            error={error && !floorName.trim() ? error : ""}
                             required
                         />
                     </div>
@@ -86,48 +93,26 @@ function FloorsStep({
                             name="floorNumber"
                             type="number"
                             value={floorNumber}
-                            onChange={event => setFloorNumber(event.target.value)}
+                            onChange={event =>  handleChange(event, setFloorNumber)}
                             placeholder="e.g. 0"
                             required
                         />
                     </div>
 
-                    <div className="col-md-3">
-                        <Button type="button" onClick={addFloor} fullWidth>
-                            Add Floor
-                        </Button>
-                    </div>
                 </div>
 
                 {error && (
                     <div className="alert alert-danger mt-3">{error}</div>
                 )}
 
-                <div className="table-responsive mt-4">
-                    <table className="table table-bordered align-middle">
-                        <thead className="table-light">
-                            <tr>
-                                <th>Floor Name</th>
-                                <th>Floor Number</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {floors.map((floor, index) => (
-                                <tr key={floor.id ?? `${floor.floorNumber}-${index}`}>
-                                    <td>{floor.floorName}</td>
-                                    <td>{floor.floorNumber}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                
 
                 <div className="d-flex justify-content-between mt-4">
                     <Button variant="secondary" onClick={onBack}>
                         Back
                     </Button>
                     <Button type="submit" loading={saving}>
-                        Save Floors & Continue
+                        Save Floor & Continue
                     </Button>
                 </div>
             </form>

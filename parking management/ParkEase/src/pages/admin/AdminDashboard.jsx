@@ -26,12 +26,12 @@ function AdminDashboard() {
       icon: "bi-geo-alt",
       path: "/admin/locations",
     },
-    {
-      title: "Users",
-      description: "View registered users.",
-      icon: "bi-people",
-      path: "/admin/users",
-    },
+    // {
+    //   title: "Users",
+    //   description: "View registered users.",
+    //   icon: "bi-people",
+    //   path: "/admin/users",
+    // },
     {
       title: "Parking History",
       description: "Review completed parking sessions.",

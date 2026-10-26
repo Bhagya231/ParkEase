@@ -16,14 +16,6 @@ import java.util.UUID;
 @Repository
 public interface ParkingLocationRepository  extends JpaRepository<ParkingLocation, UUID> {
 
-    // Get all locations: active, inactive
-    @Query(value = "SELECT * FROM parking_location WHERE is_deleted = false ORDER BY created_at DESC",nativeQuery = true)
-    List<ParkingLocation> findAllLocations();
-
-
-    // Get all active locations that are not deleted
-    @Query(value = "SELECT * FROM parking_location WHERE is_deleted = false AND status = 'ACTIVE' ORDER BY Created_at DESC ", nativeQuery = true)
-    List<ParkingLocation> findAllActiveLocations();
 
 
 

@@ -31,14 +31,14 @@ public interface ReservationRepository extends JpaRepository<Reservation, UUID>
 
 
     @Query(value = """
-    SELECT EXISTS (
-        SELECT 1
-        FROM reservations r
-        WHERE r.slot_id = :slotId
-          AND r.is_deleted = false
-          AND r.reservation_status = 'RESERVED' )
+        SELECT COUNT(*)
+            FROM Reservations r
+            WHERE r.slot_id = :slotId
+            And r.reservation_status = 'RESERVED'
     """, nativeQuery = true)
-    boolean existsActiveReservationBySlotId(@Param("slotId") String slotId);
+    long existsActiveReservationBySlotId(@Param("slotId") String slotId);
+
+
 
 
     // Get reservations belonging to a user

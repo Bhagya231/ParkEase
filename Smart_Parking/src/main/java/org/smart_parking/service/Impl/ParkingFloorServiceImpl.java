@@ -87,7 +87,7 @@ public class ParkingFloorServiceImpl implements ParkingFloorService
         try {
             getLocation(locationId);
 
-            List<ParkingFloor> floors = parkingFloorRepository.findFloorsByLocationId(locationId.toString());
+            List<ParkingFloor> floors = parkingFloorRepository.findFloorsLocationId(locationId.toString());
 
 
 
@@ -206,7 +206,7 @@ public class ParkingFloorServiceImpl implements ParkingFloorService
                 // The location can remain INACTIVE during floor activation.
                 getLocation(floor.getLocation().getId());
 
-                boolean hasSlots = parkingSlotsRepository.existsByFloorId(floor.getId().toString());
+                boolean hasSlots = parkingSlotsRepository.existsByFloorId(floor.getId().toString()) >0;
 
                 if (!hasSlots) {
                     throw new IllegalStateException("Cannot activate floor. Create at least one parking slot first.");

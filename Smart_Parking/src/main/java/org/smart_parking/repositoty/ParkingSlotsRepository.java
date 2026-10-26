@@ -18,12 +18,12 @@ public interface ParkingSlotsRepository extends JpaRepository<ParkingSlots, UUID
 
 
     @Query(value = """
-        SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END
+        SELECT COUNT(*) 
         FROM parking_slots
         WHERE floor_id = :floorId
           AND is_deleted = false
         """, nativeQuery = true)
-    boolean existsByFloorId(@Param("floorId") String floorId);
+    long existsByFloorId(@Param("floorId") String floorId);
 
     @Query(value = """
         SELECT EXISTS (

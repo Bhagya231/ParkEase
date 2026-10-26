@@ -1,8 +1,8 @@
 
 import { useMemo, useState } from "react";
-import { useLoaderData, useSearchParams,  Link } from "react-router-dom";
+import { useLoaderData, useSearchParams,  Link,useRevalidator  } from "react-router-dom";
 import {ChevronRight,Home,CarFront,CheckCircle2,Clock3,Ban,ParkingSquare,} from "lucide-react";
-
+import api from "../../util/api";
 import PageHeader from "../../components/common/PageHeader";
 import Card from "../../components/common/Card";
 
@@ -15,12 +15,16 @@ import DeactivateConfirmationModal from "../../components/common/DeactivateConfi
 function SlotsPage() {
     const { slots = [], sectionName,  slotStatus = "",} = useLoaderData();
 
+    const revalidator = useRevalidator();
     const [searchParams, setSearchParams] = useSearchParams();
 
     const [selectedSlot, setSelectedSlot] = useState(null);
     const [showSlotModal, setShowSlotModal] = useState(false);
     const [showDeactivateModal, setShowDeactivateModal] = useState(false);
    
+    const [updatingStatus, setUpdatingStatus] = useState(false);
+    const [statusMessage, setStatusMessage] = useState("");
+    const [statusError, setStatusError] = useState("");
 
     const statusOptions = [
         { value: "", label: "All Statuses" },
@@ -43,37 +47,68 @@ function SlotsPage() {
         },
         {
             title: "Available",
-            value: slots.filter(
-                (slot) => slot.slotStatus === "AVAILABLE"
-            ).length,
+            value: slots.filter((slot) => slot.slotStatus === "AVAILABLE").length,
             icon: <CheckCircle2 size={22} />,
         },
         {
             title: "Reserved",
-            value: slots.filter(
-                (slot) => slot.slotStatus === "RESERVED"
-            ).length,
+            value: slots.filter((slot) => slot.slotStatus === "RESERVED").length,
             icon: <Clock3 size={22} />,
         },
         {
             title: "Occupied",
-            value: slots.filter(
-                (slot) => slot.slotStatus === "OCCUPIED"
-            ).length,
+            value: slots.filter((slot) => slot.slotStatus === "OCCUPIED").length,
             icon: <CarFront size={22} />,
         },
         {
             title: "Unavailable",
-            value: slots.filter(
-                (slot) => slot.slotStatus === "UNAVAILABLE"
-            ).length,
+            value: slots.filter( (slot) => slot.slotStatus === "UNAVAILABLE").length,
             icon: <Ban size={22} />,
         },
     ], [slots]);
 
 
-    function handleSlotClick(slot) {
+
+    async function handleConfirmStatusChange()
+    {
+    if (!selectedSlot || updatingStatus) 
+    {
+        return;
+    }
+
+    const newStatus = selectedSlot.slotStatus === "AVAILABLE"? "UNAVAILABLE": "AVAILABLE";
+        
+    try {
+        setUpdatingStatus(true);
+        setStatusError("");
+        setStatusMessage("");
+
+
+        await api.patch( `/admin/slots/${selectedSlot.id}/status`, { slotStatus: newStatus });
+
+        setShowDeactivateModal(false);
+        setShowSlotModal(false);
+        setSelectedSlot(null);
+
+        setStatusMessage( `Slot ${newStatus === "AVAILABLE" ? "made available" : "made unavailable"} successfully.`);
+
+        revalidator.revalidate();
+    } catch (error) {
+        console.error("Failed to update slot status:", error);
+
+        setStatusError( error.response?.data?.message ||  error.response?.data?.error ||  "Failed to update slot status. Please try again."); 
+   
+    } finally {
+        setUpdatingStatus(false);
+    }
+}
+
+
+    function handleSlotClick(slot)
+     {
         setSelectedSlot(slot);
+        setStatusError("");
+        setStatusMessage("");
         setShowSlotModal(true);
     }
 
@@ -82,15 +117,31 @@ function SlotsPage() {
         setSelectedSlot(null);
     }
 
-    function handleOpenDeactivateModal() {
+    function handleOpenDeactivateModal(slot) 
+    {
+        const currentSlot = slot ?? selectedSlot;
+
+        if(!currentSlot)
+        {
+            return;
+        }
+
+        if(!["AVAILABLE", "UNAVAILABLE"].includes(currentSlot.slotStatus))
+        {
+            setStatusError("Reserved and occupied slots cannot be changed manually.");
+            
+            return;
+        }
+
+        setSelectedSlot(currentSlot);
+
+        setStatusMessage("");
+        setStatusError("");
         setShowSlotModal(false);
         setShowDeactivateModal(true);
     }
 
-    function handleCancelDeactivate() {
-        setShowDeactivateModal(false);
-        setShowSlotModal(true);
-    }
+    
 
    
 
@@ -162,6 +213,21 @@ function SlotsPage() {
                 title={`Section ${sectionName} — Slots`}
                 subtitle="View parking slots and their current statuses."
             />
+
+                {statusMessage && (
+                    <div className="alert alert-success">
+                        {statusMessage}
+                    </div>
+                )}
+
+                {statusError && (
+                    <div className="alert alert-danger">
+                        {statusError}
+                    </div>
+                )}
+
+
+
 
             <Card className="mb-4 border-0 shadow-sm">
                 <div className="row g-3">
@@ -240,22 +306,25 @@ function SlotsPage() {
                 show={showSlotModal}
                 slot={selectedSlot}
                 onClose={handleCloseSlotModal}
-                onEdit={(slot) => {
-                    
-                    console.log("Edit slot:", slot);
-                }}
+                
                 onDeactivate={handleOpenDeactivateModal}
             />
 
             <DeactivateConfirmationModal
                 show={showDeactivateModal}
-                title="Deactivate Slot"
+                title={selectedSlot?.slotStatus === "AVAILABLE" ? "Make slot Unavailable" : "Make Slot Available"}
                 itemName={selectedSlot?.slotNumber}
-                message="Are you sure you want to make this parking slot unavailable?"
-                onCancel={handleCancelDeactivate}
-                onConfirm={() => {
-                    // Connect the backend status-update API here.
+                message={selectedSlot?.slotStatus === "AVAILABLE" ? "Are you sure you want to make this parking slot unavailable?" : "Are you sure you want to make this parking slot available?" }
+                confirmText={selectedSlot?.slotStatus === "AVAILABLE" ? "Make Unavailable" : "Make Available"}
+                loading={updatingStatus}
+                onCancel={() => {
+                    if(!updatingStatus)
+                    {
+                        setShowDeactivateModal(false);
+                        setShowSlotModal(true);
+                    }
                 }}
+                onConfirm={handleConfirmStatusChange}
             />
         </div>
     );

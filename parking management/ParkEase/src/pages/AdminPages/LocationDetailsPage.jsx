@@ -1,22 +1,31 @@
-import { useLoaderData, useNavigate } from "react-router-dom";
+import { useLoaderData, useNavigate,useRevalidator  } from "react-router-dom";
 
+import { useState } from "react";
+import api from "../../util/api";
 import img from "../../assets/airport.jpg";
-import Card from "../../components/common/Card";
 import Button from "../../components/common/Button";
 import LocationSummary from "../../components/user/LocationSummary";
 import PricingTable from "../../components/user/PricingTable";
-
+import DeactivateConfirmationModal from "../../components/common/DeactivateConfirmationModal";
 
 function AdminLocationDetailsPage()
 {
     const { location, prices = [] } = useLoaderData();
     const navigate = useNavigate();
+    const revalidator = useRevalidator();
 
     const role = localStorage.getItem("role");
     const isAdmin = role === "ADMIN";
 
+    const targetStatus =location.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+
+    const [showStatusModal, setShowStatusModal] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [statusError, setStatusError] = useState("");
+
     const handleEditLocation = () => {
-        navigate(`/admin/locations/${location.id}/edit`);
+        navigate(`/admin/locations/${location.id}/setup?step=1&mode=edit`);
     };
 
     const handleViewFloors = () => {
@@ -24,11 +33,40 @@ function AdminLocationDetailsPage()
     };
 
     const handleEditPrice = (price) => {
-        navigate(
-        `/admin/locations/${location.id}/pricing/${price.id}/edit`
-        );
+         navigate( `/admin/locations/${location.id}/setup?step=2&mode=edit&priceId=${price.id}` );
     };
 
+    const handleOpenStatusModal = () => {
+        setStatusMessage("");
+        setStatusError("");
+        setShowStatusModal(true);
+    };
+
+
+    const handleConfirmStatusChange = async () => {
+    try {
+        setUpdatingStatus(true);
+        setStatusError("");
+        setStatusMessage("");
+
+        await api.patch(`/admin/locations/${location.id}/status`,{status: targetStatus});
+
+        setShowStatusModal(false);
+
+        setStatusMessage(`Location ${targetStatus === "ACTIVE" ? "activated" : "deactivated"} successfully.`);
+
+        // Reload location details to display the latest status.
+        revalidator.revalidate();
+
+    } catch (error) {
+        console.error("Failed to update location status:", error);
+
+        setStatusError(error.response?.data?.message ||  "Failed to update location status. Please try again.");
+           
+    } finally {
+        setUpdatingStatus(false);
+    }
+};
 
     return (
 
@@ -55,6 +93,18 @@ function AdminLocationDetailsPage()
           {location.locationName}
         </h3>
 
+        {statusMessage && (
+            <div className="alert alert-success" role="alert">
+                {statusMessage}
+            </div>
+        )}
+
+        {statusError && (
+            <div className="alert alert-danger" role="alert">
+                {statusError}
+            </div>
+        )}
+
         {isAdmin && (
           <div className="d-flex gap-2">
             <Button
@@ -66,13 +116,13 @@ function AdminLocationDetailsPage()
             </Button>
 
             <Button
-              variant="danger"
-              onClick={() =>
-                navigate(`/admin/locations/${location.id}/deactivate`)
-              }
+              variant={location.status === "ACTIVE" ? "danger" : "success"}
+              onClick={handleOpenStatusModal}
+              disabled={updatingStatus}
+
             >
-              <i className="bi bi-slash-circle me-2" />
-              Deactivate
+              <i className={`bi ${location.status === "ACTIVE"? "bi-slash-circle": "bi-check-circle"} me-2`} />
+                     {location.status === "ACTIVE" ? "Deactivate" : "Activate"}
             </Button>
           </div>
         )}
@@ -180,9 +230,38 @@ function AdminLocationDetailsPage()
           View Floors 
           <i className="bi bi-arrow-right ms-2" />
         </Button>
+      
       </div>
+
+
+         <DeactivateConfirmationModal
+            show={showStatusModal}
+            title={ targetStatus === "ACTIVE"? "Activate Location": "Deactivate Location"}
+      
+            itemName={location.locationName}
+            message={targetStatus === "ACTIVE"? "Are you sure you want to activate this location?" : "Are you sure you want to deactivate this location?"}
+      
+            confirmText={ targetStatus === "ACTIVE" ? "Activate" : "Deactivate"}
+            onCancel={() => {
+                if (!updatingStatus) {
+                    setShowStatusModal(false);
+                }
+            }}
+            onConfirm={handleConfirmStatusChange}
+            loading={updatingStatus}
+        />
+      
+
+
+
+
     </div>
 
+    
+
+
+
+          
 
 
 

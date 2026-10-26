@@ -4,12 +4,12 @@ import FloorCard from "../common/FloorCard";
 import Button from "../common/Button";
 
 function FloorCardList({
-    floors,
-    selectedFloorId,
+    floors =[],
+    selectedFloor,
     onSelectFloor,
     onAddFloor,
-    onEditFloor,
     onDeactivateFloor,
+    onAddSlots
 }) {
     return (
         <div className="mt-4">
@@ -20,6 +20,8 @@ function FloorCardList({
                         Select a floor to view its sections.
                     </p>
                 </div>
+
+                
 
                 <Button
                     onClick={onAddFloor}
@@ -47,18 +49,14 @@ function FloorCardList({
             ) : (
                 <div className="row g-3">
                     {floors.map((floor) => (
-                        <div
-                            className="col-12 col-md-6 col-xl-4"
-                            key={floor.id}
-                        >
+                        <div  className="col-12 col-md-6 col-xl-4" key={floor.id}>
                             <FloorCard
+                                key={floor}
                                 floor={floor}
-                                isSelected={
-                                    selectedFloorId === floor.id
-                                }
+                                isSelected={ selectedFloor?.id === floor.id}
                                 onSelect={onSelectFloor}
-                                onEdit={onEditFloor}
                                 onDeactivate={onDeactivateFloor}
+                                onAddSlots={onAddSlots}
                             />
                         </div>
                     ))}

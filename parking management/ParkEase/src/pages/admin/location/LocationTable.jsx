@@ -3,12 +3,8 @@ import StatusBadge from "../../../components/common/StatusBadge"
 
 import noLocationsImage from "/NoLocationParking.png"
 
-function LocationTable({
-  locations = [],
-  onView,
-  onContinueSetup,
- 
-}) {
+function LocationTable({locations = [],onView,onContinueSetup,})
+{
   if (locations.length === 0) {
     return (
 
@@ -26,21 +22,6 @@ function LocationTable({
         />
       </div>
       
-
-      // <div className="card border-0 shadow-sm">
-      //   <div className="card-body text-center py-5">
-      //     <img
-      //     src={noLocationsImage}
-      //     alt="No parking locations available"
-      //     className="img-fluid mb-3"
-      //     style={{
-      //       maxWidth: "340px",
-      //       maxHeight: "320px",
-      //       objectFit: "contain",
-      //     }}
-      //   />
-      //   </div>
-      // </div>
     );
   }
 

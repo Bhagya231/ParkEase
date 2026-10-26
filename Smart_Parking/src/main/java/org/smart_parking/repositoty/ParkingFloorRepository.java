@@ -27,6 +27,16 @@ public interface ParkingFloorRepository extends JpaRepository<ParkingFloor, UUID
     List<ParkingFloor> findFloorsByLocationId(@Param("locationId") String locationId);
 
 
+    @Query(value = """
+             SELECT *
+             FROM parking_floors
+             WHERE location_id = :locationId
+             AND is_deleted = false  
+             ORDER BY floor_number ASC
+              """, nativeQuery = true)
+    List<ParkingFloor> findFloorsLocationId(@Param("locationId") String locationId);
+
+
     // Get all non-deleted floors across all locations, newest first
     @Query(value = """
         SELECT *
@@ -51,10 +61,9 @@ public interface ParkingFloorRepository extends JpaRepository<ParkingFloor, UUID
         WHERE f.location_id = :locationId
           AND f.status = 'ACTIVE'
           AND f.is_deleted = false
-          AND l.status = 'ACTIVE'
           AND l.is_deleted = false
         """, nativeQuery = true)
-    long countActiveFloorsByLocation(@Param("locationId") String locationId);
+    long countFloorsByLocation(@Param("locationId") String locationId);
 
 
 

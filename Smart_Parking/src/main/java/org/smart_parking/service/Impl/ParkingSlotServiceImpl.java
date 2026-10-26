@@ -295,11 +295,11 @@ public class ParkingSlotServiceImpl implements ParkingSlotService
             }
 
             //  Check active reservations and sessions before changing availability.
-            boolean hasActiveReservation = reservationRepository.existsActiveReservationBySlotId(slotId.toString());
+            boolean hasActiveReservation = reservationRepository.existsActiveReservationBySlotId(slotId.toString()) >0 ;
 
-            boolean hasActiveSession = parkingSessionRepository.existsActiveSessionBySlotId(slotId.toString());
+            boolean hasActiveSession = parkingSessionRepository.existsActiveSessionBySlotId(slotId.toString()) > 0;
 
-            if (hasActiveReservation || hasActiveSession)
+            if (hasActiveReservation  || hasActiveSession )
             {
                 throw new IllegalStateException("Cannot change slot availability while an active reservation " + "or parking session exists");
             }

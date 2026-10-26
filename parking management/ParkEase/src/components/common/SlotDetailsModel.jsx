@@ -1,4 +1,4 @@
-import { X, CarFront, CheckCircle2, Clock3, Ban, Pencil } from "lucide-react";
+import {  CarFront, CheckCircle2,  Ban, } from "lucide-react";
 import Button from "./Button";
 
 const statusConfig = {
@@ -10,13 +10,17 @@ const statusConfig = {
 }
 
 
-function SlotDetailsModal({show,slot,onClose, onEdit, onDeactivate})
+function SlotDetailsModal({show,slot,onClose,  onDeactivate})
 {
     if (!show || !slot) {
         return null;
     }
 
      const status = statusConfig[slot.slotStatus] ?? statusConfig.UNAVAILABLE;
+
+     const canUpdateStatus = ["AVAILABLE","UNAVAILABLE",].includes(slot.slotStatus);
+
+     const isAvailable = slot.slotStatus === "AVAILABLE";
 
     const details = [
         { label: "Slot Number", value: slot.slotNumber },
@@ -91,6 +95,20 @@ function SlotDetailsModal({show,slot,onClose, onEdit, onDeactivate})
                                     </span>
                                 </div>
                             </div>
+
+
+                             {!canUpdateStatus && (
+                                    <div className="col-12">
+                                        <small className="text-muted">
+                                            This slot's status is managed by
+                                            the reservation and parking session
+                                            process.
+                                        </small>
+                                    </div>
+                                )}
+
+
+
                         </div>
                     </div>
 
@@ -102,21 +120,14 @@ function SlotDetailsModal({show,slot,onClose, onEdit, onDeactivate})
                             Close
                         </Button>
 
-                        <Button
-                            variant="primary"
-                            onClick={() => onEdit?.(slot)}
-                        >
-                            <Pencil size={15} className="me-1" />
-                            Edit
-                        </Button>
+                        
 
-                        {slot.slotStatus !== "UNAVAILABLE" && (
-                            <Button
-                                variant="danger"
-                                onClick={() => onDeactivate?.(slot)}
-                            >
-                                <Ban size={15} className="me-1" />
-                                Deactivate
+                        {canUpdateStatus && (
+                            <Button variant={isAvailable ? "danger" : "success"}
+                            onClick={() => onDeactivate?.(slot)}>
+                                {isAvailable ? (<><Ban size={15} className="me-1"/>Make Unavailable</>) : (
+                                    <><CheckCircle2 size={15} className="me-1" /> Make Available</>
+                                )}
                             </Button>
                         )}
                     </div>

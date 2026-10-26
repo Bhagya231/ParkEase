@@ -63,8 +63,7 @@ public interface ParkingSessionRepository extends JpaRepository<ParkingSession, 
 
 
     @Query(value = """
-    SELECT EXISTS (
-        SELECT 1
+        SELECT COUNT(*)
         FROM parking_sessions ps
         INNER JOIN reservations r ON r.id = ps.reservation_id
         WHERE r.slot_id = :slotId
@@ -72,9 +71,8 @@ public interface ParkingSessionRepository extends JpaRepository<ParkingSession, 
           AND r.is_deleted = false
           AND ps.session_status = 'ACTIVE'
           AND ps.exit_time IS NULL
-    )
     """, nativeQuery = true)
-    boolean existsActiveSessionBySlotId(@Param("slotId") String slotId);
+    long existsActiveSessionBySlotId(@Param("slotId") String slotId);
 
 
 

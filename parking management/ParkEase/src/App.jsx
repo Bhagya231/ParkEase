@@ -84,6 +84,10 @@ const router = createBrowserRouter([
             element: <AddLocationWizard />
           },
           {
+            path: "locations/:locationId/setup",
+            element: <AddLocationWizard />,
+          },
+          {
             path: "locations/:locationId",
             element: <AdminLocationDetailsPage />,
             loader: adminLocationDetailsLoader,

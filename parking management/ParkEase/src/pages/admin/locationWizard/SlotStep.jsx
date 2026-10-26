@@ -1,9 +1,10 @@
 
-import { useState } from "react";
-import Card from "../../../common/Card";
-import FormInput from "....//../common/FormInput";
-import FormSelect from "../../../common/FormSelect";
-import Button from "../../../common/Button";
+import { useState , useEffect} from "react";
+import { Form } from "react-router-dom";
+import Card from "../../../components/common/Card";
+import FormInput from "../../../components/common/FormInput";
+import FormSelect from "../../../components/common/FormSelection";
+import Button from "../../../components/common/Button";
 
 const vehicleOptions = [
     { value: "CAR", label: "Car" },
@@ -17,14 +18,9 @@ const slotOptions = [
     { value: "ACCESSIBLE", label: "Accessible" }
 ];
 
-function SlotsStep({
-    floors = [],
-    savedSlots = [],
-    onSave,
-    onBack,
-    saving = false
-}) {
-    const [floorId, setFloorId] = useState("");
+function SlotsStep({floor = [],onSave,onBack,onNext,saving = false})
+ {
+    
     const [sectionName, setSectionName] = useState("A");
     const [startingNumber, setStartingNumber] = useState("1");
     const [slotCount, setSlotCount] = useState("10");
@@ -32,11 +28,20 @@ function SlotsStep({
     const [slotType, setSlotType] = useState("STANDARD");
     const [error, setError] = useState("");
 
+    const floorId = floor?.id ?? floor?.floorId;
+
+    useEffect(() => {
+        setError("");
+    }, [floorId]);
+    console.log(floorId);
+
+    console.log(floor);
+
     async function handleSubmit(event) {
         event.preventDefault();
 
-        if (!floorId) {
-            setError("Select a floor.");
+        if (!floor.id) {
+            setError("Please save a floor before generating slots.");
             return;
         }
 
@@ -45,66 +50,88 @@ function SlotsStep({
             return;
         }
 
-        if (
-            !Number.isInteger(Number(startingNumber)) ||
-            Number(startingNumber) < 1 ||
-            !Number.isInteger(Number(slotCount)) ||
-            Number(slotCount) < 1
-        ) {
+        if (startingNumber.trim() === "" || !Number.isInteger(Number(startingNumber)) || Number(startingNumber) < 1)
+         {
             setError("Starting number and slot count must be positive integers.");
             return;
         }
 
         setError("");
 
-        await onSave({
-            floorId,
-            request: {
-                sectionName: sectionName.trim(),
-                startingNumber: Number(startingNumber),
-                slotCount: Number(slotCount),
-                vehicleType,
-                slotType
+
+
+        try{
+            console.log(floorId);
+            const result = await onSave({ floorId,
+                                            request: {
+                                                sectionName: sectionName.trim(),
+                                                startingNumber: Number(startingNumber),
+                                                slotCount: Number(slotCount),
+                                                vehicleType,
+                                                slotType
+                                            }
+                                        });
+                console.log(result);
+             if (result)
+            {
+                onNext(result);
+            } else {
+                setError("Slots could not be generated. Please try again.");
             }
-        });
+
+        }catch (error) {
+            setError( error.message || "Failed to generate slots. Please try again.");
+        }
+
     }
 
-    const floorOptions = floors.map(floor => ({
-        value: String(floor.id),
-        label: `${floor.floorName} (${floor.floorNumber})`
-    }));
 
     return (
-        <Card
-            title="Parking Slots"
-            description="Generate slots for each saved floor."
-            className="border-0"
-        >
-            <form onSubmit={handleSubmit} noValidate>
-                {error && (
-                    <div className="alert alert-danger">{error}</div>
+        <Card title="Parking Slots" className="border-0"
+            description="Generate multiple parking slots for your saved floor.">
+            <Form onSubmit={handleSubmit} noValidate>
+
+
+                {floor ? (
+                    <div className="alert alert-light border mb-4">
+                        <div className="fw-semibold">
+                            <i className="bi bi-building me-2"></i>
+                            {floor.floorName}
+                        </div>
+                        <div className="text-muted small">
+                            Floor Number: {floor.floorNumber}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="alert alert-warning">floor
+                        Save a floor before generating parking slots.
+                    </div>
                 )}
 
-                <div className="row g-3">
-                    <div className="col-md-6">
-                        <FormSelect
-                            label="Select Floor"
-                            name="floorId"
-                            value={floorId}
-                            onChange={setFloorId}
-                            options={floorOptions}
-                            placeholder="Choose a floor"
-                            required
-                        />
-                    </div>
 
+
+                
+
+                <div className="row g-3">
+                    
                     <div className="col-md-6">
                         <FormInput
                             label="Section Name"
                             name="sectionName"
                             value={sectionName}
-                            onChange={event => setSectionName(event.target.value)}
+                            onChange={event =>{ setSectionName(event.target.value), setError("")}}
                             placeholder="e.g. A"
+                            required
+                        />
+                    </div>
+
+                     <div className="col-md-6">
+                        <FormSelect
+                            label="Vehicle Type"
+                            name="vehicleType"
+                            value={vehicleType}
+                            onChange={value => setVehicleType(value)}
+                            options={vehicleOptions}
                             required
                         />
                     </div>
@@ -115,7 +142,7 @@ function SlotsStep({
                             name="startingNumber"
                             type="number"
                             value={startingNumber}
-                            onChange={event => setStartingNumber(event.target.value)}
+                            onChange={event => {setStartingNumber(event.target.value),setError("")}}
                             required
                         />
                     </div>
@@ -126,56 +153,43 @@ function SlotsStep({
                             name="slotCount"
                             type="number"
                             value={slotCount}
-                            onChange={event => setSlotCount(event.target.value)}
+                            onChange={event => {setSlotCount(event.target.value), setError("")}}
                             required
                         />
                     </div>
+
+                   
 
                     <div className="col-md-4">
-                        <FormSelect
-                            label="Vehicle Type"
-                            name="vehicleType"
-                            value={vehicleType}
-                            onChange={setVehicleType}
-                            options={vehicleOptions}
-                            required
-                        />
-                    </div>
-
-                    <div className="col-md-6">
                         <FormSelect
                             label="Slot Type"
                             name="slotType"
                             value={slotType}
-                            onChange={setSlotType}
+                            onChange={value => setSlotType(value)}
                             options={slotOptions}
                             required
                         />
                     </div>
                 </div>
 
-                <p className="text-muted small mt-3">
-                    Slots will be generated when you save this configuration.
-                </p>
+
+                 {error && (
+                    <div className="alert alert-danger">{error}</div>
+                )}
+
+                
 
                 <div className="d-flex justify-content-between mt-4">
                     <Button variant="secondary" onClick={onBack}>
                         Back
                     </Button>
-                    <Button type="submit" loading={saving}>
-                        Generate Slots
+                    <Button type="submit" loading={saving} disabled={!floorId || saving}>
+                        Generate Slots & Continue
                     </Button>
                 </div>
-            </form>
+            </Form>
 
-            {savedSlots.length > 0 && (
-                <div className="mt-4">
-                    <h6>Previously Created Slots</h6>
-                    <p className="text-muted mb-0">
-                        {savedSlots.length} saved slots are available for review.
-                    </p>
-                </div>
-            )}
+        
         </Card>
     );
 }

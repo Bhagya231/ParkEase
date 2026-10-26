@@ -1,6 +1,6 @@
 
 import { useEffect, useMemo, useState } from "react";
-import { useLoaderData, useNavigate, Link } from "react-router-dom";
+import { useLoaderData, useNavigate, Link, useRevalidator,   } from "react-router-dom";
 
 import { ChevronRight, Home } from "lucide-react";
 import Img from "../../assets/airport.jpg"
@@ -10,6 +10,7 @@ import Card from "../../components/common/Card";
 import LocationSummary from "../../components/user/LocationSummary";
 import FloorCardList from "../../components/admin/FloorCardList";
 import FloorSectionsTable from "../../components/admin/FloorSectionTable";
+import DeactivateConfirmationModal from "../../components/common/DeactivateConfirmationModal";
 
 function FloorManagement() {
     const { location, floors } = useLoaderData();
@@ -17,7 +18,14 @@ function FloorManagement() {
 
     const [selectedFloor, setSelectedFloor] = useState( () => floors?.[0] ?? null);
 
-  
+    const revalidator = useRevalidator();
+
+    const [showStatusModal, setShowStatusModal] = useState(false);
+
+    const [targetStatus, setTargetStatus] = useState(null);
+    const [updatingStatus, setUpdatingStatus] = useState(false);
+    const [statusMessage, setStatusMessage] = useState("");
+    const [statusError, setStatusError] = useState("");
 
     const [slots, setSlots] = useState([]);
     const [loadingSlots, setLoadingSlots] = useState(false);
@@ -133,20 +141,59 @@ function FloorManagement() {
             icon: "✅",
         },
     ], [floors]);
+    
 
     function handleAddFloor() {
-        // Connect to the floor creation flow later.
+        navigate(`/admin/locations/${location.id}/setup?step=3&mode=edit`);
     }
 
-    function handleEditFloor(floor) {
-        // Connect to the floor edit flow later.
-        console.log("Edit floor:", floor);
+    function handleFloorStatusChange(floor) {
+        const newStatus = floor.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+
+        setSelectedFloor(floor);
+        setTargetStatus(newStatus);
+        setStatusMessage("");
+        setStatusError("");
+        setShowStatusModal(true);
     }
 
-    function handleDeactivateFloor(floor) {
-        // Connect to the deactivate flow later.
-        console.log("Deactivate floor:", floor);
+
+    // Activate or deactivate the floor after confirmation
+    async function handleConfirmStatusChange() {
+        if (!selectedFloor || !targetStatus || updatingStatus) {
+            return;
+        }
+
+        try {
+            setUpdatingStatus(true);
+            setStatusError("");
+            setStatusMessage("");
+
+            await api.patch(`/admin/floors/${selectedFloor.id}/status`,{ status: targetStatus } );
+
+            setShowStatusModal(false);
+
+            setStatusMessage(`Floor ${targetStatus === "ACTIVE" ? "activated" : "deactivated"} successfully.` );
+
+            revalidator.revalidate();
+        } catch (error) {
+            console.error("Failed to update floor status:", error);
+
+            setStatusError( error.response?.data?.message ||"Failed to update floor status. Please try again.");
+        } finally {
+            setUpdatingStatus(false);
+        }
     }
+
+    let locationId = location.id;
+
+    function handleAddSlots(floor) 
+    {
+    navigate( `/admin/locations/${locationId}/setup?step=4&mode=add-slots&floorId=${floor.id}`);
+}
+
+    
+
 
     function handleViewSlots(floor, section) {
         navigate( `/admin/locations/${location.id}/floors/${floor.id}/slots?sectionName=${encodeURIComponent( section.sectionName )}`);
@@ -220,14 +267,8 @@ function FloorManagement() {
 
                             
                         
-                        <p>
-                                <span
-                                className={`badge ${
-                                    location.status === "ACTIVE"
-                                        ? "bg-success"
-                                        : "bg-secondary"
-                                }`}
-                            >
+                            <p>
+                                <span className={`badge ${location.status === "ACTIVE"? "bg-success": "bg-secondary" }`}>
                                 {location.status}
                             </span>
                             </p>
@@ -242,13 +283,25 @@ function FloorManagement() {
                 title="Location Overview"
             />
 
+            {statusMessage && (
+                    <div className="alert alert-success" role="alert">
+                        {statusMessage}
+                    </div>
+                )}
+
+                {statusError && (
+                    <div className="alert alert-danger" role="alert">
+                        {statusError}
+                    </div>
+                )}
+
             <FloorCardList
                 floors={floors}
-                selectedFloorId={selectedFloor?.id}
+                selectedFloorId={selectedFloor}
                 onSelectFloor={handleSelectFloor}
                 onAddFloor={handleAddFloor}
-                onEditFloor={handleEditFloor}
-                onDeactivateFloor={handleDeactivateFloor}
+                onAddSlots={handleAddSlots}                
+                onDeactivateFloor={handleFloorStatusChange}
             />
 
             <div className="mt-4">
@@ -285,6 +338,20 @@ function FloorManagement() {
                     />
                 </div>
             </div>
+
+
+            <DeactivateConfirmationModal
+                show={showStatusModal}
+                title={targetStatus === "ACTIVE" ? "Activate Floor" : "Deactivate Floor"}
+                
+                message= {targetStatus === "ACTIVE" ? `Are you sure you want to activate this ${selectedFloor?.floorName}?` : `Are you sure you want to deactivate this ${selectedFloor?.floorName}?`  }
+                loading={updatingStatus}
+                confirmText={targetStatus === "ACTIVE" ? "Activate" : "Deactivate"}
+                onCancel={() => {
+                    if (!updatingStatus) {setShowStatusModal(false);}
+                }}
+                onConfirm={handleConfirmStatusChange}
+            />
         </div>
     );
 }

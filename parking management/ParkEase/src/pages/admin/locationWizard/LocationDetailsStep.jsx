@@ -1,8 +1,8 @@
 
 import { useEffect, useState } from "react";
 import Card from "../../../components/common/Card";
-import FormInput from "....//../common/FormInput";
-import Button from "../../../common/Button";
+import FormInput from "../../../components/common/FormInput";
+import Button from "../../../components/common/Button";
 import { validateLocationForm } from "../../../util/ValidateLocationForm";
 
 const initialLocation = {
@@ -13,17 +13,19 @@ const initialLocation = {
     closeTime: ""
 };
 
-function LocationDetailsStep({
-    savedLocation,
-    onSave,
-    onNext,
-    saving = false
-}) {
+function LocationDetailsStep({savedLocation,onSave, onNext,saving = false}) {
     const [formData, setFormData] = useState(initialLocation);
     const [errors, setErrors] = useState({});
+    const [formError, setFormError] = useState("");
 
     useEffect(() => {
-        if (savedLocation) {
+        if (!savedLocation) {
+
+            setFormData({ ...initialLocation });
+            setErrors({});
+            setFormError("");
+            return;
+        }
             setFormData({
                 locationName: savedLocation.locationName ?? "",
                 area: savedLocation.area ?? "",
@@ -31,21 +33,19 @@ function LocationDetailsStep({
                 openTime: savedLocation.openTime?.slice(0, 5) ?? "",
                 closeTime: savedLocation.closeTime?.slice(0, 5) ?? ""
             });
-        }
+        
+        setErrors({});
+        setFormError("");
+
     }, [savedLocation]);
 
     function handleChange(event) {
         const { name, value } = event.target;
 
-        setFormData(previous => ({
-            ...previous,
-            [name]: value
-        }));
+        setFormData(previous => ({ ...previous, [name]: value}));
 
-        setErrors(previous => ({
-            ...previous,
-            [name]: ""
-        }));
+        setErrors(previous => ({...previous, [name]: "" }));
+        setFormError("");
     }
 
     async function handleSubmit(event) {
@@ -56,18 +56,29 @@ function LocationDetailsStep({
 
         if (Object.keys(validationErrors).length > 0) return;
 
-        // The wizard will connect this to the create/update API.
-        const saved = await onSave(formData);
 
-        if (saved) {
-            onNext(saved);
+         try {
+
+            setFormError("");
+
+            const saved = await onSave(formData);
+
+            if (saved?.id) {
+                onNext(saved);
+            } else {
+                setFormError("Location could not be saved. Please try again.");
+            }
+        } catch (error) 
+        {
+            setFormError( error.message || "Failed to save the location.");
         }
+
     }
 
     return (
         <Card
             title="Location Details"
-            description="Add the basic information for your parking location."
+            description="Enter the basic information for your parking location."
             className="border-0"
         >
             <form onSubmit={handleSubmit} noValidate>
@@ -132,6 +143,13 @@ function LocationDetailsStep({
                         />
                     </div>
                 </div>
+
+                 {formError && (
+                    <div className="alert alert-danger mt-3" role="alert">
+                        {formError}
+                    </div>
+                )}
+
 
                 <div className="d-flex justify-content-end mt-4">
                     <Button type="submit" loading={saving}>

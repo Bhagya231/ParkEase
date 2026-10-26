@@ -5,10 +5,10 @@ function FormSelect({
   value,
   onChange,
   options = [],
-  placeholder = "Select an option",
+  
   error,
   className = "",
-  disabled = false,
+  
   required = false,}) 
   {
 
