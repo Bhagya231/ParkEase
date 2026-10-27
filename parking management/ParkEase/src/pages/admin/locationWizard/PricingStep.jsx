@@ -31,6 +31,9 @@ function PricingStep({savedPrices = [],onSave,onBack,saving = false,onNext})
                 };
             })
         );
+
+         setErrors({});
+        setFormError("");
     }, [savedPrices]);
 
     function handleChange(index, event) {
@@ -51,10 +54,10 @@ function PricingStep({savedPrices = [],onSave,onBack,saving = false,onNext})
 
         prices.forEach((price, index) => {
             ["hourPrice", "overstayPrice"].forEach(field => {
-                const value = price[field];
+                const value = price[field].trim();
                 const number = Number(value);
 
-                if (value.trim() === "" || !Number.isFinite(number) || number < 1) {
+                if (value === "" || !Number.isFinite(number) || number < 1) {
                     nextErrors[`${index}-${field}`] = "Enter a price of at least 1.";
                 } else if (!/^\d{1,8}(\.\d{1,2})?$/.test(value))
                     {
@@ -70,7 +73,7 @@ function PricingStep({savedPrices = [],onSave,onBack,saving = false,onNext})
     async function handleSubmit(event) {
         event.preventDefault();
 
-        if (!validate()) return;
+        if (saving  || !validate()) return;
 
         setFormError("");
 
@@ -114,6 +117,8 @@ function PricingStep({savedPrices = [],onSave,onBack,saving = false,onNext})
                                             label="Hourly Price (₹)"
                                             name="hourPrice"
                                             type="number"
+                                            min="1"
+                                            step="0.01"
                                             value={price.hourPrice}
                                             onChange={event =>
                                                 handleChange(index, event)

@@ -1,7 +1,8 @@
- import api from "./api";
 
+import api from "./api";
 
- function getList(data) {
+// Get list from array or paginated response
+function getList(data) {
     if (Array.isArray(data)) {
         return data;
     }
@@ -14,31 +15,64 @@
 }
 
 
-
-// Check whether every slot has matching vehicle pricing
-function hasValidPricingForSlots(slots, prices)
- {
-    return slots.every(slot => prices.some(price => price.vehicleType === slot.vehicleType));
-}
-
-// Check whether the location setup is complete
-export function isSetupComplete({ floors = [], slots = [], prices = [] }) 
-{
-    if (floors.length === 0 || slots.length === 0) 
-        {
+// Check whether every vehicle type used by slots has pricing
+function hasValidPricingForSlots(slots, prices) {
+    if (slots.length === 0 || prices.length === 0) {
         return false;
     }
 
+    const pricedVehicleTypes = new Set(
+        prices.map(price => price.vehicleType)
+    );
+
+    return slots.every(slot =>
+        pricedVehicleTypes.has(slot.vehicleType)
+    );
+}
+
+
+// Check whether location setup is complete
+export function isSetupComplete({
+    floors = [],
+    slots = [],
+    prices = [],
+    floorSlots = []
+}) {
+    if (
+        floors.length === 0 ||
+        slots.length === 0 ||
+        prices.length === 0
+    ) {
+        return false;
+    }
+
+    // Every floor must have at least one slot
+    const everyFloorHasSlots = floorSlots.every(
+        item => item.slots.length > 0
+    );
+
+    if (!everyFloorHasSlots) {
+        return false;
+    }
+
+    // Every slot must have matching vehicle pricing
     return hasValidPricingForSlots(slots, prices);
 }
+
 
 // Load data for a new or existing location
 export async function loadLocationWizard(locationId = null) {
 
-    
-    const emptyData = { location: null, prices: [],floors: [],floor: null,slots: [],isSetupComplete: false,nextStep: 0};
-       
-  
+    const emptyData = {
+        location: null,
+        prices: [],
+        floors: [],
+        floor: null,
+        slots: [],
+        allSlots: [],
+        isSetupComplete: false,
+        nextStep: 0
+    };
 
     // No ID means Add Location
     if (!locationId) {
@@ -46,8 +80,13 @@ export async function loadLocationWizard(locationId = null) {
     }
 
     try {
-        
-        const [locationResponse,pricingResponse,floorsResponse] = await Promise.all([api.get(`/admin/locations/${locationId}`),
+        // Load location, pricing and floors
+        const [
+            locationResponse,
+            pricingResponse,
+            floorsResponse
+        ] = await Promise.all([
+            api.get(`/admin/locations/${locationId}`),
 
             api.get(`/admin/locations/${locationId}/pricing`, {
                 params: {
@@ -63,48 +102,69 @@ export async function loadLocationWizard(locationId = null) {
         const prices = getList(pricingResponse.data);
         const floors = getList(floorsResponse.data);
 
-        
-        const floorSlots = await Promise.all( floors.map(async floor => {const response = await api.get(`/admin/floors/${floor.id}/slots` );
+        // Load slots for every floor
+        const floorSlots = await Promise.all(
+            floors.map(async floor => {
+                const response = await api.get(
+                    `/admin/floors/${floor.id}/slots`
+                );
 
                 return {
-                    floors,
+                    floor,
                     slots: getList(response.data)
                 };
             })
         );
 
-        console.log("Location ID:", locationId);
-        console.log("Location API response:", locationResponse.data);
-        console.log("Location loaded:", location);
+        // Collect all slots from every floor
+        const slots = floorSlots.flatMap(
+            item => item.slots
+        );
 
-        
-
-       
-        const slots = floorSlots.flatMap(item => item.slots);
-
-       
-        const selectedFloorData = floorSlots.find(item => item.slots.length === 0) || floorSlots[0] || null;
+        // Find the first floor without slots.
+        // If every floor has slots, select the first floor.
+        const selectedFloorData =
+            floorSlots.find(item => item.slots.length === 0) || floorSlots[0] ||null;
 
         const floor = selectedFloorData?.floor || null;
         const selectedFloorSlots = selectedFloorData?.slots || [];
 
-        
-        const setupComplete = isSetupComplete({floors,slots, prices});
-
-        
-        let nextStep = 1;
-
+        // Validate pricing against existing slot vehicle types
         const hasPricingForSlots = hasValidPricingForSlots(slots, prices);
 
-        if (floors.length === 0) {
-            nextStep = 2; // Floors
-        } else if (slots.length === 0) {
-            nextStep = 3; // Slots
-        } else if (!hasPricingForSlots) {
-            nextStep = 1; // Pricing
+        // Determine whether the entire setup is complete
+        const setupComplete = isSetupComplete({
+            floors,
+            slots,
+            prices,
+            floorSlots
+        });
+
+        // Determine the first incomplete step
+        let nextStep;
+
+        if (prices.length === 0 || (slots.length > 0 && !hasPricingForSlots)) {
+            
+            nextStep = 1;
+        } else if (floors.length === 0) {
+            
+            nextStep = 2;
+        } else if ( floorSlots.some(item => item.slots.length === 0)) {
+           
+            nextStep = 3;
         } else {
-            nextStep = 4; // Review / Finish
+            
+            nextStep = 4;
         }
+
+        console.log("Wizard location ID:", locationId);
+        console.log("Loaded location:", location);
+        console.log("Loaded prices:", prices);
+        console.log("Loaded floors:", floors);
+        console.log("Selected floor:", floor);
+        console.log("All slots:", slots);
+        console.log("Next wizard step:", nextStep);
+        console.log("Setup complete:", setupComplete);
 
         return {
             location,
@@ -118,10 +178,15 @@ export async function loadLocationWizard(locationId = null) {
         };
 
     } catch (error) {
-        console.error("Failed to load location wizard data:",error);
+        console.error(
+            "Failed to load location wizard data:",
+            error
+        );
 
-        throw new Error(error.response?.data?.message ||error.response?.data?.error || "Failed to load location setup data.");
-            
-  
+        throw new Error(
+            error.response?.data?.message ||
+            error.response?.data?.error ||
+            "Failed to load location setup data."
+        );
     }
 }
